@@ -1,11 +1,30 @@
 import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, Partials, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import Rcon from "rcon";
 import sqlite3 from "sqlite3";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 // ----------------------------------------------
 // Configuration (use env vars if defined)
 // ----------------------------------------------
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+
+// Check if Discord token is provided
+if (!DISCORD_BOT_TOKEN || DISCORD_BOT_TOKEN === "your_discord_bot_token_here") {
+  console.error("❌ ERROR: Discord Bot Token is missing!");
+  console.error("Please create a .env file with your Discord bot token:");
+  console.error("DISCORD_BOT_TOKEN=your_actual_bot_token_here");
+  console.error("");
+  console.error("To get a Discord bot token:");
+  console.error("1. Go to https://discord.com/developers/applications");
+  console.error("2. Create a new application or select existing one");
+  console.error("3. Go to 'Bot' section");
+  console.error("4. Copy the token and paste it in .env file");
+  process.exit(1);
+}
+
 const RCON_HOST = process.env.RCON_HOST || "IP_SERVER"; // e.g. 127.0.0.1
 const RCON_PORT = Number(process.env.RCON_PORT || 12345);
 const RCON_PASSWORD = process.env.RCON_PASSWORD || "RCON_PASSWORD";
@@ -21,71 +40,71 @@ const SHOP_ITEMS = {
     price: 1500, 
     spawnCommand: "#SpawnItem BP_AK47",
     name: "AK-47 Assault Rifle",
-    description: "ปืนไรเฟิลอัตโนมัติ AK-47 ความเสียหายสูง",
-    image: "https://i.imgur.com/example1.jpg" // Replace with actual AK-47 image URL
+    description: "ปืนไรเฟิลอัตโนมัติ AK-47 ความเสียหายสูง ใช้กระสุน 7.62x39mm",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/f/f8/AK-47.png/revision/latest?cb=20200404202546"
   },
-  m4a1: { 
+  m16: { 
     price: 1800, 
-    spawnCommand: "#SpawnItem BP_M4A1",
-    name: "M4A1 Assault Rifle", 
-    description: "ปืนไรเฟิล M4A1 แม่นยำและเสถียร",
-    image: "https://i.imgur.com/example2.jpg" // Replace with actual M4A1 image URL
+    spawnCommand: "#SpawnItem BP_M16",
+    name: "M16 Assault Rifle", 
+    description: "ปืนไรเฟิล M16 แม่นยำและเสถียร ใช้กระสุน 5.56x45mm",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/e/ea/M16.png/revision/latest?cb=20200404202605"
   },
-  sniper: { 
+  m82a1: { 
     price: 2500, 
-    spawnCommand: "#SpawnItem BP_SniperRifle",
-    name: "Sniper Rifle",
-    description: "ปืนไรเฟิลสไนเปอร์สำหรับยิงระยะไกล",
-    image: "https://i.imgur.com/example3.jpg"
+    spawnCommand: "#SpawnItem BP_Weapon_M82A1",
+    name: "M82A1 Barrett",
+    description: "ปืนไรเฟิลสไนเปอร์ .50 BMG สำหรับยิงระยะไกลและทำลายยานพาหนะ",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/2/27/M82A1.png/revision/latest?cb=20220813052625"
   },
-  shotgun: { 
+  svd: { 
+    price: 2200, 
+    spawnCommand: "#SpawnItem BP_Weapon_SVD",
+    name: "SVD Dragunov",
+    description: "ปืนไรเฟิลสไนเปอร์ SVD ใช้กระสุน 7.62x54mmR แม่นยำสูง",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/8/8d/SVD.png/revision/latest?cb=20220813052625"
+  },
+  mp5: { 
+    price: 1200, 
+    spawnCommand: "#SpawnItem BP_Weapon_MP5",
+    name: "MP5 Submachine Gun",
+    description: "ปืนกลมือ MP5 ใช้กระสุน 9x19mm เหมาะสำหรับการต่อสู้ระยะกลาง",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/4/4b/MP5.png/revision/latest?cb=20220813052625"
+  },
+  desert_eagle: { 
     price: 800, 
-    spawnCommand: "#SpawnItem BP_Shotgun",
-    name: "Pump Shotgun",
-    description: "ปืนลูกซองพลังทำลายสูงระยะใกล้",
-    image: "https://i.imgur.com/example4.jpg"
+    spawnCommand: "#SpawnItem BP_Weapon_DesertEagle",
+    name: "Desert Eagle",
+    description: "ปืนพก Desert Eagle ใช้กระสุน .50 AE พลังทำลายสูง",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/2/24/Desert_Eagle.png/revision/latest?cb=20220813051814"
   },
-  pistol: { 
+  m9: { 
     price: 600, 
-    spawnCommand: "#SpawnItem BP_Pistol",
-    name: "9mm Pistol",
-    description: "ปืนพก 9mm อาวุธประจำตัว",
-    image: "https://i.imgur.com/example5.jpg"
+    spawnCommand: "#SpawnItem BP_Weapon_M9",
+    name: "TEC01 M9",
+    description: "ปืนพก M9 ใช้กระสุน 9x19mm อาวุธประจำตัวที่เชื่อถือได้",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/f/f8/TEC01_M9.png/revision/latest?cb=20220813051814"
   },
   machete: { 
     price: 300, 
     spawnCommand: "#SpawnItem BP_Machete",
     name: "Machete",
-    description: "มีดดาบสำหรับต่อสู้ระยะประชิด",
-    image: "https://i.imgur.com/example6.jpg"
+    description: "มีดดาบสำหรับต่อสู้ระยะประชิด ความเสียหายสูงต่อผู้เล่น",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/8/8d/Machete.png/revision/latest?cb=20220810200158"
+  },
+  crowbar: { 
+    price: 250, 
+    spawnCommand: "#SpawnItem BP_Crowbar",
+    name: "Crowbar",
+    description: "ชะแลงเหล็ก อาวุธทื่อที่มีโอกาสทำให้ผู้เล่นสลบสูง",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/c/c0/Crowbar.png/revision/latest?cb=20220810200134"
   },
   grenade: { 
     price: 400, 
     spawnCommand: "#SpawnItem BP_Grenade",
     name: "Frag Grenade",
-    description: "ระเบิดมือสำหรับทำลายกลุ่มศัตรู",
-    image: "https://i.imgur.com/example7.jpg"
-  },
-  ammo_rifle: { 
-    price: 200, 
-    spawnCommand: "#SpawnItem BP_RifleAmmo",
-    name: "Rifle Ammunition",
-    description: "กระสุนสำหรับปืนไรเฟิล",
-    image: "https://i.imgur.com/example8.jpg"
-  },
-  ammo_pistol: { 
-    price: 150, 
-    spawnCommand: "#SpawnItem BP_PistolAmmo",
-    name: "Pistol Ammunition",
-    description: "กระสุนสำหรับปืนพก",
-    image: "https://i.imgur.com/example9.jpg"
-  },
-  scope: { 
-    price: 500, 
-    spawnCommand: "#SpawnItem BP_Scope",
-    name: "4x Scope",
-    description: "กล้องเล็ง 4 เท่าสำหรับปืนไรเฟิล",
-    image: "https://i.imgur.com/example10.jpg"
+    description: "ระเบิดมือสำหรับทำลายกลุ่มศัตรูและทำลายฐาน",
+    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/4/4b/Grenade.png/revision/latest?cb=20220813052625"
   },
 };
 
