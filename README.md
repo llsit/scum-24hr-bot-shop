@@ -2,6 +2,19 @@
 
 Discord bot for SCUM server weapon shop with RCON integration.
 
+## Project Structure
+
+```
+scum-24hr-bot/
+├── index.js          # Main bot file
+├── welcomePack.js    # Welcome pack functionality
+├── shopItems.js      # Shop items configuration
+├── config.js         # Configuration settings
+├── package.json      # Dependencies
+├── README.md         # Documentation
+└── shop.db          # SQLite database
+```
+
 ## Setup Instructions
 
 ### 1. Install Dependencies
@@ -47,6 +60,7 @@ node index.js
 
 - `!balance` - Check your coin balance
 - `!daily` - Get daily bonus coins
+- `!welcome` - Get welcome pack (one-time only)
 - `!shop` - Show shop catalog
 - `!menu` or `!list` - Show interactive shop menu
 - `!buy <item>` - Buy an item (e.g., `!buy ak47`)
@@ -67,6 +81,20 @@ node index.js
 9. **Crowbar** (250 coins) - Melee weapon
 10. **Frag Grenade** (400 coins) - Explosive
 
+## Welcome Pack
+
+สำหรับผู้เล่นใหม่ สามารถรับ Welcome Pack ได้ครั้งเดียวโดยใช้คำสั่ง `!welcome`
+
+**ของใน Welcome Pack:**
+- **Bandage** - ผ้าพันแผลสำหรับรักษาบาดแผล
+- **Water Bottle** - ขวดน้ำดื่ม
+- **Tuna Can** - ปลาทูน่ากระป๋อง อาหารสำเร็จรูป
+- **Apple** - แอปเปิ้ล ผลไม้สด
+- **Compass** - เข็มทิศสำหรับนำทาง
+- **Flashlight** - ไฟฉายสำหรับส่องในที่มืด
+- **Matches** - ไม้ขีดไฟสำหรับจุดไฟ
+- **Knife** - มีดพกสำหรับใช้งานทั่วไป
+
 ## Features
 
 - ✅ Real weapon data from SCUM Wiki
@@ -75,5 +103,6 @@ node index.js
 - ✅ SQLite database for user data
 - ✅ RCON integration for SCUM server
 - ✅ Daily bonus system
+- ✅ Welcome pack system for new players
 - ✅ Steam ID linking
 - ✅ Purchase history tracking

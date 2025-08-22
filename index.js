@@ -2,6 +2,9 @@ import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, P
 import Rcon from "rcon";
 import sqlite3 from "sqlite3";
 import dotenv from "dotenv";
+import { WELCOME_PACK_ITEMS, handleWelcomeCommand, getWelcomePackInfo } from "./welcomePack.js";
+import { SHOP_ITEMS, getShopItemsInfo } from "./shopItems.js";
+import { DAILY_BONUS_COINS, DAILY_COOLDOWN_MS, BOT_CONFIG, DB_CONFIG, RCON_CONFIG } from "./config.js";
 
 // Load environment variables
 dotenv.config();
@@ -30,83 +33,9 @@ const RCON_PORT = Number(process.env.RCON_PORT || 12345);
 const RCON_PASSWORD = process.env.RCON_PASSWORD || "RCON_PASSWORD";
 const ENABLE_RCON = (process.env.ENABLE_RCON || "false").toLowerCase() === "true";
 
-// Daily bonus configuration
-const DAILY_BONUS_COINS = 500;
-const DAILY_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Shop catalog with images and descriptions
-const SHOP_ITEMS = {
-  ak47: { 
-    price: 1500, 
-    spawnCommand: "#SpawnItem BP_AK47",
-    name: "AK-47 Assault Rifle",
-    description: "ปืนไรเฟิลอัตโนมัติ AK-47 ความเสียหายสูง ใช้กระสุน 7.62x39mm",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/f/f8/AK-47.png/revision/latest?cb=20200404202546"
-  },
-  m16: { 
-    price: 1800, 
-    spawnCommand: "#SpawnItem BP_M16",
-    name: "M16 Assault Rifle", 
-    description: "ปืนไรเฟิล M16 แม่นยำและเสถียร ใช้กระสุน 5.56x45mm",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/e/ea/M16.png/revision/latest?cb=20200404202605"
-  },
-  m82a1: { 
-    price: 2500, 
-    spawnCommand: "#SpawnItem BP_Weapon_M82A1",
-    name: "M82A1 Barrett",
-    description: "ปืนไรเฟิลสไนเปอร์ .50 BMG สำหรับยิงระยะไกลและทำลายยานพาหนะ",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/2/27/M82A1.png/revision/latest?cb=20220813052625"
-  },
-  svd: { 
-    price: 2200, 
-    spawnCommand: "#SpawnItem BP_Weapon_SVD",
-    name: "SVD Dragunov",
-    description: "ปืนไรเฟิลสไนเปอร์ SVD ใช้กระสุน 7.62x54mmR แม่นยำสูง",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/8/8d/SVD.png/revision/latest?cb=20220813052625"
-  },
-  mp5: { 
-    price: 1200, 
-    spawnCommand: "#SpawnItem BP_Weapon_MP5",
-    name: "MP5 Submachine Gun",
-    description: "ปืนกลมือ MP5 ใช้กระสุน 9x19mm เหมาะสำหรับการต่อสู้ระยะกลาง",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/4/4b/MP5.png/revision/latest?cb=20220813052625"
-  },
-  desert_eagle: { 
-    price: 800, 
-    spawnCommand: "#SpawnItem BP_Weapon_DesertEagle",
-    name: "Desert Eagle",
-    description: "ปืนพก Desert Eagle ใช้กระสุน .50 AE พลังทำลายสูง",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/2/24/Desert_Eagle.png/revision/latest?cb=20220813051814"
-  },
-  m9: { 
-    price: 600, 
-    spawnCommand: "#SpawnItem BP_Weapon_M9",
-    name: "TEC01 M9",
-    description: "ปืนพก M9 ใช้กระสุน 9x19mm อาวุธประจำตัวที่เชื่อถือได้",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/f/f8/TEC01_M9.png/revision/latest?cb=20220813051814"
-  },
-  machete: { 
-    price: 300, 
-    spawnCommand: "#SpawnItem BP_Machete",
-    name: "Machete",
-    description: "มีดดาบสำหรับต่อสู้ระยะประชิด ความเสียหายสูงต่อผู้เล่น",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/8/8d/Machete.png/revision/latest?cb=20220810200158"
-  },
-  crowbar: { 
-    price: 250, 
-    spawnCommand: "#SpawnItem BP_Crowbar",
-    name: "Crowbar",
-    description: "ชะแลงเหล็ก อาวุธทื่อที่มีโอกาสทำให้ผู้เล่นสลบสูง",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/c/c0/Crowbar.png/revision/latest?cb=20220810200134"
-  },
-  grenade: { 
-    price: 400, 
-    spawnCommand: "#SpawnItem BP_Grenade",
-    name: "Frag Grenade",
-    description: "ระเบิดมือสำหรับทำลายกลุ่มศัตรูและทำลายฐาน",
-    image: "https://static.wikia.nocookie.net/scum_gamepedia_en/images/4/4b/Grenade.png/revision/latest?cb=20220813052625"
-  },
-};
+
+
 
 // ----------------------------------------------
 // Database setup (SQLite)
@@ -118,9 +47,13 @@ db.serialize(() => {
       "discordId TEXT PRIMARY KEY, " +
       "steamId TEXT, " +
       "coins INTEGER DEFAULT 0, " +
-      "lastDailyAt INTEGER DEFAULT 0" +
+      "lastDailyAt INTEGER DEFAULT 0, " +
+      "welcomePackReceived INTEGER DEFAULT 0" +
     ")"
   );
+  
+  // Add welcomePackReceived column to existing users table if it doesn't exist
+  db.run("ALTER TABLE users ADD COLUMN welcomePackReceived INTEGER DEFAULT 0");
 
   db.run(
     "CREATE TABLE IF NOT EXISTS purchases (" +
@@ -226,6 +159,8 @@ async function safeRconSend(command) {
     }
   });
 }
+
+
 
 // ----------------------------------------------
 // Discord client
@@ -367,7 +302,7 @@ client.on("messageCreate", async (msg) => {
   const lower = content.toLowerCase();
 
   // Echo back any command starting with '!' but allow specific commands to proceed
-  if (lower.startsWith("!") && lower !== "!menu" && lower !== "!list" && lower !== "!setup" && lower !== "!unsetup" && lower !== "!link" && lower !== "!balance" && lower !== "!shop" && lower !== "!daily" && !lower.startsWith("!buy ")) {
+  if (lower.startsWith("!") && lower !== "!menu" && lower !== "!list" && lower !== "!setup" && lower !== "!unsetup" && lower !== "!link" && lower !== "!balance" && lower !== "!shop" && lower !== "!daily" && lower !== "!welcome" && !lower.startsWith("!buy ")) {
     try {
       await msg.reply(`คุณส่งคำสั่ง: ${content}`);
     } catch (e) {
@@ -491,6 +426,25 @@ client.on("messageCreate", async (msg) => {
           msg.reply(`✅ รับโบนัสรายวัน ${formatCoins(DAILY_BONUS_COINS)} แล้ว!`);
         });
       });
+    });
+    return;
+  }
+
+  // !welcome - Get welcome pack
+  if (content === "!welcome") {
+    ensureUserRow(msg.author.id, (err) => {
+      if (err) {
+        msg.reply("❌ ฐานข้อมูลมีปัญหา");
+        return;
+      }
+      
+      handleWelcomeCommand(msg, db, safeRconSend)
+        .then(welcomeMessage => {
+          msg.reply(welcomeMessage);
+        })
+        .catch(errorMessage => {
+          msg.reply(errorMessage);
+        });
     });
     return;
   }
